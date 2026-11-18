@@ -1,0 +1,9 @@
+# Cloudflare Pages / Workers Configuration for PantryOS
+name = "pantry-os"
+compatibility_date = "2026-11-18"
+pages_build_output_dir = "./apps/web/dist"
+
+# Production environment variables
+[vars]
+NODE_ENV = "production"
+API_BASE_URL = "https://api.pantryos.com"

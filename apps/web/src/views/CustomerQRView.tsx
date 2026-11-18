@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Locale, getDictionary } from '@pantryos/i18n';
 import { Dish, Order } from '@pantryos/contracts';
 import { formatINR } from '@pantryos/business-rules';
-import { ShoppingBag, ChevronRight, CheckCircle2, X } from 'lucide-react';
+import { ShoppingBag, ChevronRight, X, UtensilsCrossed, CheckCircle2 } from 'lucide-react';
 
 interface CustomerQRViewProps {
   locale: Locale;
   dishes: Dish[];
-  activeTableNumber?: string;
+  activeTableNumber: string;
+  onTableChange: (tableNum: string) => void;
   tableOrders: Order[];
   onPlaceOrder: (items: Array<{ dishVariantId: string; quantity: number }>) => void;
   onRequestBill: () => void;
@@ -16,7 +17,8 @@ interface CustomerQRViewProps {
 export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
   locale,
   dishes,
-  activeTableNumber = 'T1',
+  activeTableNumber,
+  onTableChange,
   tableOrders,
   onPlaceOrder,
   onRequestBill
@@ -25,6 +27,8 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
   const [cart, setCart] = useState<{ [variantId: string]: number }>({});
   const [selectedDishForModal, setSelectedDishForModal] = useState<Dish | null>(null);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
+  const [orderSuccessMessage, setOrderSuccessMessage] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<'ALL' | 'READY_BATCH' | 'FRESH_ORDER'>('ALL');
 
   const totalCartCount = Object.values(cart).reduce((a, b) => a + b, 0);
 
@@ -56,7 +60,18 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
     onPlaceOrder(items);
     setCart({});
     setIsCartSheetOpen(false);
+    setOrderSuccessMessage(
+      locale === 'kn'
+        ? `ಆರ್ಡರ್ ಯಶಸ್ವಿಯಾಗಿ ಕಳುಹಿಸಲಾಗಿದೆ! ಟೇಬಲ್ ${activeTableNumber} ಗೆ ಅಡುಗೆಮನೆಯಿಂದ ಬರಲಿದೆ.`
+        : `Order placed successfully! Sent to kitchen for Table ${activeTableNumber}.`
+    );
+    setTimeout(() => setOrderSuccessMessage(null), 5000);
   };
+
+  const filteredDishes = dishes.filter((dish) => {
+    if (selectedCategory === 'ALL') return true;
+    return dish.preparationPolicy === selectedCategory;
+  });
 
   return (
     <div
@@ -74,7 +89,7 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
       {/* Mobile Top Bar */}
       <div
         style={{
-          padding: '16px 20px',
+          padding: '14px 18px',
           backgroundColor: '#FFFFFF',
           borderBottom: '1px solid #E9E6DD',
           display: 'flex',
@@ -83,18 +98,41 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
         }}
       >
         <div>
-          <span
-            style={{
-              backgroundColor: '#234B3A',
-              color: '#FFFFFF',
-              padding: '4px 10px',
-              borderRadius: '20px',
-              fontSize: '12px',
-              fontWeight: 700
-            }}
-          >
-            {dict.orders.tableNumber} {activeTableNumber}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                backgroundColor: '#234B3A',
+                color: '#FFFFFF',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                fontSize: '12px',
+                fontWeight: 700
+              }}
+            >
+              {dict.orders.tableNumber} {activeTableNumber}
+            </span>
+            <select
+              value={activeTableNumber}
+              onChange={(e) => onTableChange(e.target.value)}
+              style={{
+                fontSize: '11px',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                border: '1px solid #D79B52',
+                backgroundColor: '#FAF8F3',
+                color: '#234B3A',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              <option value="T1">T1</option>
+              <option value="T2">T2</option>
+              <option value="T3">T3</option>
+              <option value="T4">T4</option>
+              <option value="T5">T5</option>
+              <option value="T6">T6</option>
+            </select>
+          </div>
           <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#2A2E2B', marginTop: '4px' }}>
             {dict.common.brandName}
           </h2>
@@ -109,18 +147,41 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
         </div>
       </div>
 
+      {/* Success Notification Alert */}
+      {orderSuccessMessage && (
+        <div
+          style={{
+            margin: '12px 16px 0',
+            padding: '12px 16px',
+            backgroundColor: '#EBF4F0',
+            border: '1px solid #1B6E44',
+            borderRadius: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            color: '#1B6E44',
+            fontSize: '13px',
+            fontWeight: 600
+          }}
+        >
+          <CheckCircle2 size={18} />
+          <span>{orderSuccessMessage}</span>
+        </div>
+      )}
+
       {/* Running Table Bill Banner (Petpooja QR Pattern) */}
       {tableOrders.length > 0 && (
         <div
           style={{
             margin: '12px 16px 0',
             padding: '12px 16px',
-            backgroundColor: '#EBF4F0',
+            backgroundColor: '#FFFFFF',
             border: '1px solid #A0D2BB',
             borderRadius: '10px',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
           }}
         >
           <div>
@@ -128,13 +189,13 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
               {locale === 'kn' ? 'ಚಾಲ್ತಿ ಟೇಬಲ್ ಆರ್ಡರ್' : 'Active Table Session'}
             </span>
             <p style={{ fontSize: '12px', color: '#2A2E2B', marginTop: '2px' }}>
-              {tableOrders.length} {locale === 'kn' ? 'ಆರ್ಡರ್ ದಾಖಲಾಗಿದೆ' : 'orders placed'}
+              {tableOrders.length} {locale === 'kn' ? 'ಆರ್ಡರ್‌ಗಳು ಚಾಲನೆಯಲ್ಲಿವೆ' : 'orders placed'}
             </p>
           </div>
           <button
             onClick={onRequestBill}
             style={{
-              padding: '6px 12px',
+              padding: '8px 14px',
               backgroundColor: '#234B3A',
               color: '#FFFFFF',
               border: 'none',
@@ -149,14 +210,67 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
         </div>
       )}
 
+      {/* Category Pills Filter */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          padding: '12px 16px 4px',
+          overflowX: 'auto',
+          whiteSpace: 'nowrap'
+        }}
+      >
+        <button
+          onClick={() => setSelectedCategory('ALL')}
+          style={{
+            padding: '6px 14px',
+            borderRadius: '20px',
+            border: 'none',
+            backgroundColor: selectedCategory === 'ALL' ? '#234B3A' : '#E9E6DD',
+            color: selectedCategory === 'ALL' ? '#FFFFFF' : '#2A2E2B',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer'
+          }}
+        >
+          {locale === 'kn' ? 'ಎಲ್ಲವೂ' : 'All Items'}
+        </button>
+        <button
+          onClick={() => setSelectedCategory('READY_BATCH')}
+          style={{
+            padding: '6px 14px',
+            borderRadius: '20px',
+            border: 'none',
+            backgroundColor: selectedCategory === 'READY_BATCH' ? '#234B3A' : '#E9E6DD',
+            color: selectedCategory === 'READY_BATCH' ? '#FFFFFF' : '#2A2E2B',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer'
+          }}
+        >
+          {locale === 'kn' ? 'ಇಂದಿನ ವಿಶೇಷ (Ready)' : 'Fresh Today (Ready)'}
+        </button>
+        <button
+          onClick={() => setSelectedCategory('FRESH_ORDER')}
+          style={{
+            padding: '6px 14px',
+            borderRadius: '20px',
+            border: 'none',
+            backgroundColor: selectedCategory === 'FRESH_ORDER' ? '#234B3A' : '#E9E6DD',
+            color: selectedCategory === 'FRESH_ORDER' ? '#FFFFFF' : '#2A2E2B',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer'
+          }}
+        >
+          {locale === 'kn' ? 'ಬಿಸಿ ರೊಟ್ಟಿಗಳು (Fresh)' : 'Hot Rottis (Fresh)'}
+        </button>
+      </div>
+
       {/* Food Items List */}
       <div style={{ padding: '16px', flex: 1, paddingBottom: totalCartCount > 0 ? '90px' : '20px' }}>
-        <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#234B3A', marginBottom: '12px' }}>
-          {locale === 'kn' ? 'ಇಂದಿನ ವಿಶೇಷ ಮೆನು' : "Today's Fresh Vegetarian Menu"}
-        </h3>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {dishes.map((dish) => {
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {filteredDishes.map((dish) => {
             const variant = dish.variants[0];
             const currentQty = cart[variant.id] || 0;
 
@@ -178,8 +292,8 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
                   src={dish.imageUrl}
                   alt={dish.nameEn}
                   style={{
-                    width: '100px',
-                    height: '100px',
+                    width: '95px',
+                    height: '95px',
                     borderRadius: '10px',
                     objectFit: 'cover',
                     flexShrink: 0
@@ -207,8 +321,8 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
                             setCart((prev) => ({ ...prev, [variant.id]: Math.max(0, (prev[variant.id] || 0) - 1) }))
                           }
                           style={{
-                            width: '26px',
-                            height: '26px',
+                            width: '28px',
+                            height: '28px',
                             borderRadius: '4px',
                             border: '1px solid #D79B52',
                             backgroundColor: '#FFFFFF',
@@ -218,12 +332,12 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
                         >
                           -
                         </button>
-                        <span style={{ fontSize: '13px', fontWeight: 700 }}>{currentQty}</span>
+                        <span style={{ fontSize: '14px', fontWeight: 700 }}>{currentQty}</span>
                         <button
                           onClick={() => handleAddToCart(variant.id)}
                           style={{
-                            width: '26px',
-                            height: '26px',
+                            width: '28px',
+                            height: '28px',
                             borderRadius: '4px',
                             border: '1px solid #D79B52',
                             backgroundColor: '#D79B52',
@@ -331,8 +445,7 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
               borderTopRightRadius: '20px',
               padding: '24px',
               maxWidth: '480px',
-              width: '100%',
-              animation: 'slideUp 0.2s ease-out'
+              width: '100%'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

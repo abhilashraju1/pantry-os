@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'demo-media/**/*'],
+      includeAssets: ['favicon.svg', 'demo-media/**/*', '_redirects'],
       manifest: {
         name: 'PantryOS — Smart Traditional Karnataka Food Pantry',
         short_name: 'PantryOS',
@@ -18,14 +18,10 @@ export default defineConfig({
         orientation: 'any',
         icons: [
           {
-            src: '/demo-media/branding/icon-192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: '/demo-media/branding/icon-512.png',
-            sizes: '512x512',
-            type: 'image/png'
+            src: '/demo-media/branding/logo.svg',
+            sizes: '192x192 512x512',
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
           }
         ]
       },
@@ -35,6 +31,16 @@ export default defineConfig({
     })
   ],
   server: {
+    port: 3000,
+    host: '0.0.0.0',
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true
+      }
+    }
+  },
+  preview: {
     port: 3000,
     host: '0.0.0.0',
     proxy: {

@@ -11,11 +11,28 @@ import { PackingPassView } from './views/PackingPassView.js';
 export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('pos');
   const [locale, setLocale] = useState<Locale>('kn');
+  const [activeTableNumber, setActiveTableNumber] = useState('T1');
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [batches, setBatches] = useState<ProductionBatch[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+
+  // Read URL query parameters on initial load (e.g. from QR scan: ?view=qr&table=T2)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get('view') as AppView | null;
+      const tableParam = params.get('table');
+
+      if (viewParam && ['pos', 'kds', 'qr', 'admin', 'packing'].includes(viewParam)) {
+        setCurrentView(viewParam);
+      }
+      if (tableParam) {
+        setActiveTableNumber(tableParam);
+      }
+    }
+  }, []);
 
   // Fetch initial state from API
   const refreshData = async () => {
@@ -176,16 +193,20 @@ export const App: React.FC = () => {
           <CustomerQRView
             locale={locale}
             dishes={dishes}
-            activeTableNumber="T1"
-            tableOrders={orders.filter((o) => o.tableNumber === 'T1')}
+            activeTableNumber={activeTableNumber}
+            onTableChange={setActiveTableNumber}
+            tableOrders={orders.filter((o) => o.tableNumber === activeTableNumber)}
             onPlaceOrder={(items) =>
               handleOrderCreated({
                 channel: 'QR_TABLE',
-                tableSessionToken: 'sess_token_t1_98a7f',
+                tableSessionToken: `sess_token_${activeTableNumber.toLowerCase()}`,
+                tableNumber: activeTableNumber,
                 items
               })
             }
-            onRequestBill={() => alert('Bill requested! Cashier will present bill at your table.')}
+            onRequestBill={() =>
+              alert(`Bill requested for Table ${activeTableNumber}! Cashier will present bill at your table.`)
+            }
           />
         )}
 
