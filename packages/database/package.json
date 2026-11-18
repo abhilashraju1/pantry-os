@@ -1,0 +1,20 @@
+{
+  "name": "@pantryos/database",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pantryos/business-rules": "workspace:*",
+    "@pantryos/contracts": "workspace:*",
+    "drizzle-orm": "^0.38.3"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.30.1",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "pantry-os",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Smart Karnataka Vegetarian Pantry, Kitchen, POS & Commerce Platform",
+  "scripts": {
+    "build": "pnpm --filter \"./packages/*\" --filter \"./apps/*\" run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev:api": "pnpm --filter @pantryos/api run dev",
+    "dev:web": "pnpm --filter @pantryos/web run dev",
+    "dev": "pnpm --parallel run dev",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

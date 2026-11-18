@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
+  <rect width="400" height="300" fill="#234B3A" />
+  <!-- Traditional Banana leaf / brass plate -->
+  <circle cx="200" cy="150" r="115" fill="#FAF8F3" stroke="#D79B52" stroke-width="6" />
+  <!-- Two golden-crisp rice rottis -->
+  <circle cx="170" cy="145" r="55" fill="#FAF5E4" stroke="#D69E2E" stroke-width="3" />
+  <circle cx="230" cy="155" r="55" fill="#FAF5E4" stroke="#D69E2E" stroke-width="3" />
+  <!-- Onion, chilli and cumin specks on rotti -->
+  <circle cx="150" cy="130" r="4" fill="#805AD5" />
+  <circle cx="180" cy="160" r="4" fill="#38A169" />
+  <circle cx="165" cy="140" r="2.5" fill="#2D3748" />
+  <circle cx="220" cy="140" r="4" fill="#805AD5" />
+  <circle cx="245" cy="170" r="4" fill="#38A169" />
+  <circle cx="235" cy="150" r="2.5" fill="#2D3748" />
+  <!-- Coconut chutney bowl -->
+  <circle cx="200" cy="85" r="25" fill="#E2E8F0" stroke="#CBD5E0" stroke-width="2" />
+  <circle cx="200" cy="85" r="20" fill="#EDF2F7" />
+  <circle cx="198" cy="83" r="2" fill="#1A202C" />
+  <ellipse cx="202" cy="86" rx="3" ry="5" fill="#22543D" />
+  <text x="200" y="275" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#FAF8F3" text-anchor="middle">ಅಕ್ಕಿ ರೊಟ್ಟಿ (Akki Rotti)</text>
+</svg>

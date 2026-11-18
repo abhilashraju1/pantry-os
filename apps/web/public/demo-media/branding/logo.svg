@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" rx="40" fill="#234B3A"/>
+  <circle cx="100" cy="85" r="45" fill="#D79B52"/>
+  <path d="M75 140 C75 125, 125 125, 125 140 Z" fill="#FAF8F3"/>
+  <circle cx="100" cy="75" r="15" fill="#FAF8F3"/>
+  <text x="100" y="175" font-family="'Inter', sans-serif" font-size="20" font-weight="bold" fill="#FAF8F3" text-anchor="middle">PantryOS</text>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
+  <rect width="400" height="300" fill="#234B3A" />
+  <circle cx="200" cy="150" r="110" fill="#FAF8F3" stroke="#D79B52" stroke-width="6" />
+  <circle cx="200" cy="150" r="90" fill="#C05621" />
+  <!-- Vegetable chunks and ghee shine -->
+  <rect x="160" y="130" width="16" height="16" rx="3" fill="#DD6B20" />
+  <rect x="220" y="145" width="14" height="14" rx="3" fill="#38A169" />
+  <rect x="185" y="165" width="18" height="18" rx="4" fill="#ECC94B" />
+  <circle cx="205" cy="135" r="8" fill="#E53E3E" />
+  <!-- Ghee drizzle & curry leaves -->
+  <path d="M190 120 Q 200 140 210 160" stroke="#FFD700" stroke-width="4" fill="none" opacity="0.9" />
+  <ellipse cx="175" cy="155" rx="6" ry="12" fill="#22543D" transform="rotate(-30 175 155)" />
+  <ellipse cx="225" cy="135" rx="6" ry="12" fill="#22543D" transform="rotate(25 225 135)" />
+  <text x="200" y="275" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#FAF8F3" text-anchor="middle">ಬಿಸಿ ಬೇಳೆ ಬಾತ್ (Bisi Bele Bath)</text>
+</svg>
