@@ -17,23 +17,23 @@ export const EquipmentStatusSchema = z.enum([
 export type EquipmentStatus = z.infer<typeof EquipmentStatusSchema>;
 
 export const EquipmentSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   code: z.string(),
   nameEn: z.string(),
   nameKn: z.string(),
-  stationId: z.string().uuid(),
+  stationId: z.string().min(1),
   stationNameEn: z.string(),
   type: EquipmentTypeSchema,
   status: EquipmentStatusSchema,
   isExclusive: z.boolean().default(true),
-  currentTaskId: z.string().uuid().nullable(),
+  currentTaskId: z.string().min(1).nullable(),
   lockedUntil: z.string().datetime().nullable()
 });
 export type Equipment = z.infer<typeof EquipmentSchema>;
 
 export const AcquireEquipmentLockRequestSchema = z.object({
-  equipmentId: z.string().uuid(),
-  taskId: z.string().uuid(),
+  equipmentId: z.string().min(1),
+  taskId: z.string().min(1),
   durationSeconds: z.number().int().positive()
 });
 export type AcquireEquipmentLockRequest = z.infer<typeof AcquireEquipmentLockRequestSchema>;

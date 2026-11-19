@@ -9,9 +9,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.5.16",
     "@pantryos/business-rules": "workspace:*",
     "@pantryos/contracts": "workspace:*",
-    "drizzle-orm": "^0.38.3"
+    "@types/pg": "^8.23.1",
+    "drizzle-orm": "^0.38.3",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "drizzle-kit": "^0.30.1",

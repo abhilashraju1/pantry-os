@@ -27,26 +27,26 @@ export const OrderStatusSchema = z.enum([
 export type OrderStatus = z.infer<typeof OrderStatusSchema>;
 
 export const OrderItemRequestSchema = z.object({
-  dishVariantId: z.string().uuid(),
+  dishVariantId: z.string().min(1),
   quantity: z.number().int().positive(),
   specialInstructions: z.string().optional()
 });
 export type OrderItemRequest = z.infer<typeof OrderItemRequestSchema>;
 
 export const OrderItemSchema = z.object({
-  id: z.string().uuid(),
-  orderId: z.string().uuid(),
-  dishId: z.string().uuid(),
+  id: z.string().min(1),
+  orderId: z.string().min(1),
+  dishId: z.string().min(1),
   dishNameEn: z.string(),
   dishNameKn: z.string(),
-  variantId: z.string().uuid(),
+  variantId: z.string().min(1),
   variantNameEn: z.string(),
   variantNameKn: z.string(),
   quantity: z.number().int().positive(),
   unitPricePaise: z.number().int().positive(),
   subtotalPaise: z.number().int().positive(),
   specialInstructions: z.string().optional(),
-  allocatedBatchId: z.string().uuid().nullable(),
+  allocatedBatchId: z.string().min(1).nullable(),
   status: z.enum(['PENDING', 'PREPARING', 'READY', 'PACKED', 'SERVED'])
 });
 export type OrderItem = z.infer<typeof OrderItemSchema>;
@@ -63,12 +63,12 @@ export const CreateOrderRequestSchema = z.object({
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;
 
 export const OrderSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   orderNumber: z.string(),
-  branchId: z.string().uuid(),
+  branchId: z.string().min(1),
   channel: OrderChannelSchema,
   status: OrderStatusSchema,
-  tableId: z.string().uuid().nullable(),
+  tableId: z.string().min(1).nullable(),
   tableNumber: z.string().nullable(),
   customerName: z.string().nullable(),
   customerPhone: z.string().nullable(),

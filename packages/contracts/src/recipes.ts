@@ -9,17 +9,17 @@ export const PreparationPolicySchema = z.enum([
 export type PreparationPolicy = z.infer<typeof PreparationPolicySchema>;
 
 export const RecipeIngredientSchema = z.object({
-  ingredientId: z.string().uuid(),
+  ingredientId: z.string().min(1),
   quantity: z.number().positive(),
   unit: UnitCodeSchema,
   wasteFactorPct: z.number().min(0).max(100).default(0),
   isSubRecipe: z.boolean().default(false),
-  subRecipeId: z.string().uuid().optional()
+  subRecipeId: z.string().min(1).optional()
 });
 export type RecipeIngredient = z.infer<typeof RecipeIngredientSchema>;
 
 export const RecipeStepSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   stepOrder: z.number().int().positive(),
   titleEn: z.string(),
   titleKn: z.string(),
@@ -32,8 +32,8 @@ export const RecipeStepSchema = z.object({
 export type RecipeStep = z.infer<typeof RecipeStepSchema>;
 
 export const RecipeVersionSchema = z.object({
-  id: z.string().uuid(),
-  recipeId: z.string().uuid(),
+  id: z.string().min(1),
+  recipeId: z.string().min(1),
   versionNumber: z.number().int().positive(),
   status: z.enum(['DRAFT', 'UNDER_REVIEW', 'APPROVED', 'ARCHIVED']),
   baseYieldQuantity: z.number().positive(),
@@ -46,26 +46,26 @@ export const RecipeVersionSchema = z.object({
 export type RecipeVersion = z.infer<typeof RecipeVersionSchema>;
 
 export const DishVariantSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   nameEn: z.string(),
   nameKn: z.string(),
   portionQuantity: z.number().positive(),
   portionUnit: UnitCodeSchema,
   pricePaise: z.number().int().positive(),
-  packagingItemId: z.string().uuid().optional()
+  packagingItemId: z.string().min(1).optional()
 });
 export type DishVariant = z.infer<typeof DishVariantSchema>;
 
 export const DishSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   code: z.string(),
   nameEn: z.string(),
   nameKn: z.string(),
   descriptionEn: z.string(),
   descriptionKn: z.string(),
   preparationPolicy: PreparationPolicySchema,
-  recipeId: z.string().uuid(),
-  activeVersionId: z.string().uuid(),
+  recipeId: z.string().min(1),
+  activeVersionId: z.string().min(1),
   variants: z.array(DishVariantSchema),
   imageUrl: z.string(),
   isActive: z.boolean(),

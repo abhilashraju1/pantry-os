@@ -5,3 +5,4 @@ export * from './batches.js';
 export * from './kitchen.js';
 export * from './orders.js';
 export * from './payments.js';
+export * from './audit.js';

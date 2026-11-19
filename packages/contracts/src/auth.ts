@@ -19,13 +19,13 @@ export const LoginRequestSchema = z.object({
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 
 export const UserProfileSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   email: z.string().email(),
   fullName: z.string(),
   phone: z.string().optional(),
   roles: z.array(UserRoleSchema),
-  branchId: z.string().uuid(),
-  organizationId: z.string().uuid(),
+  branchId: z.string().min(1),
+  organizationId: z.string().min(1),
   isActive: z.boolean()
 });
 export type UserProfile = z.infer<typeof UserProfileSchema>;
@@ -36,10 +36,10 @@ export const TableSessionRequestSchema = z.object({
 export type TableSessionRequest = z.infer<typeof TableSessionRequestSchema>;
 
 export const TableSessionResponseSchema = z.object({
-  tableId: z.string().uuid(),
+  tableId: z.string().min(1),
   tableNumber: z.string(),
   sessionToken: z.string(),
-  branchId: z.string().uuid(),
-  activeOrderId: z.string().uuid().nullable()
+  branchId: z.string().min(1),
+  activeOrderId: z.string().min(1).nullable()
 });
 export type TableSessionResponse = z.infer<typeof TableSessionResponseSchema>;

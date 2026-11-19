@@ -15,7 +15,7 @@ export type WSEventType = z.infer<typeof WSEventTypeSchema>;
 
 export const WSEventEnvelopeSchema = z.object({
   type: WSEventTypeSchema,
-  branchId: z.string().uuid(),
+  branchId: z.string().min(1),
   timestamp: z.string().datetime(),
   payload: z.record(z.unknown())
 });

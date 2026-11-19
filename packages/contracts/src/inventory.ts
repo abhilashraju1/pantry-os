@@ -18,7 +18,7 @@ export const IngredientCategorySchema = z.enum([
 export type IngredientCategory = z.infer<typeof IngredientCategorySchema>;
 
 export const IngredientSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   code: z.string(),
   nameEn: z.string(),
   nameKn: z.string(),
@@ -33,9 +33,9 @@ export const IngredientSchema = z.object({
 export type Ingredient = z.infer<typeof IngredientSchema>;
 
 export const StockLotSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   lotNumber: z.string(),
-  ingredientId: z.string().uuid(),
+  ingredientId: z.string().min(1),
   initialQuantity: z.number().positive(),
   availableQuantity: z.number().nonnegative(),
   reservedQuantity: z.number().nonnegative(),
@@ -47,8 +47,8 @@ export const StockLotSchema = z.object({
 export type StockLot = z.infer<typeof StockLotSchema>;
 
 export const GoodsReceiptRequestSchema = z.object({
-  supplierId: z.string().uuid(),
-  ingredientId: z.string().uuid(),
+  supplierId: z.string().min(1),
+  ingredientId: z.string().min(1),
   quantity: z.number().positive(),
   unitCostPaise: z.number().int().positive(),
   lotNumber: z.string().min(1),
@@ -57,8 +57,8 @@ export const GoodsReceiptRequestSchema = z.object({
 export type GoodsReceiptRequest = z.infer<typeof GoodsReceiptRequestSchema>;
 
 export const StockWastageRequestSchema = z.object({
-  ingredientId: z.string().uuid(),
-  lotId: z.string().uuid().optional(),
+  ingredientId: z.string().min(1),
+  lotId: z.string().min(1).optional(),
   quantity: z.number().positive(),
   reasonCode: z.enum(['SPOILED', 'EXPIRED', 'DROPPED', 'QUALITY_REJECT', 'AUDIT_DISCREPANCY']),
   notes: z.string().optional()

@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "description": "Smart Karnataka Vegetarian Pantry, Kitchen, POS & Commerce Platform",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
   "scripts": {
     "build": "pnpm --filter \"./packages/*\" --filter \"./apps/*\" run build",
     "test": "vitest run",
@@ -10,7 +14,10 @@
     "dev:api": "pnpm --filter @pantryos/api run dev",
     "dev:web": "pnpm --filter @pantryos/web run dev",
     "dev": "pnpm --parallel run dev",
-    "typecheck": "tsc -b"
+    "typecheck": "pnpm -r run typecheck",
+    "db:migrate": "pnpm --filter @pantryos/database run db:migrate",
+    "db:seed": "pnpm --filter @pantryos/database run db:seed",
+    "db:reset-demo": "pnpm --filter @pantryos/database run db:reset-demo"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

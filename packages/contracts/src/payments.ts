@@ -20,7 +20,7 @@ export const PaymentStatusSchema = z.enum([
 export type PaymentStatus = z.infer<typeof PaymentStatusSchema>;
 
 export const RecordPaymentRequestSchema = z.object({
-  orderId: z.string().uuid(),
+  orderId: z.string().min(1),
   amountPaise: z.number().int().positive(),
   method: PaymentMethodSchema,
   transactionRef: z.string().optional()
@@ -28,9 +28,9 @@ export const RecordPaymentRequestSchema = z.object({
 export type RecordPaymentRequest = z.infer<typeof RecordPaymentRequestSchema>;
 
 export const CashSessionSchema = z.object({
-  id: z.string().uuid(),
-  branchId: z.string().uuid(),
-  cashierUserId: z.string().uuid(),
+  id: z.string().min(1),
+  branchId: z.string().min(1),
+  cashierUserId: z.string().min(1),
   cashierName: z.string(),
   openingCashPaise: z.number().int().nonnegative(),
   expectedCashPaise: z.number().int().nonnegative(),

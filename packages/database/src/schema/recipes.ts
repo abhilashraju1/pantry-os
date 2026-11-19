@@ -3,8 +3,8 @@ import { branches } from './organizations.js';
 import { ingredients } from './inventory.js';
 
 export const recipes = pgTable('recipes', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  branchId: uuid('branch_id').references(() => branches.id).notNull(),
+  id: text('id').primaryKey(),
+  branchId: text('branch_id').references(() => branches.id).notNull(),
   code: text('code').notNull(),
   nameEn: text('name_en').notNull(),
   nameKn: text('name_kn').notNull(),
@@ -15,31 +15,31 @@ export const recipes = pgTable('recipes', {
 });
 
 export const recipeVersions = pgTable('recipe_versions', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  recipeId: uuid('recipe_id').references(() => recipes.id).notNull(),
+  id: text('id').primaryKey(),
+  recipeId: text('recipe_id').references(() => recipes.id).notNull(),
   versionNumber: integer('version_number').notNull(),
   status: text('status').default('DRAFT').notNull(),
   baseYieldQuantity: numeric('base_yield_quantity', { precision: 12, scale: 3 }).notNull(),
   yieldUnit: text('yield_unit').notNull(),
   approvedAt: timestamp('approved_at', { withTimezone: true }),
-  approvedByUserId: uuid('approved_by_user_id'),
+  approvedByUserId: text('approved_by_user_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 });
 
 export const recipeIngredients = pgTable('recipe_ingredients', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  recipeVersionId: uuid('recipe_version_id').references(() => recipeVersions.id).notNull(),
-  ingredientId: uuid('ingredient_id').references(() => ingredients.id).notNull(),
+  id: text('id').primaryKey(),
+  recipeVersionId: text('recipe_version_id').references(() => recipeVersions.id).notNull(),
+  ingredientId: text('ingredient_id').references(() => ingredients.id).notNull(),
   quantity: numeric('quantity', { precision: 12, scale: 3 }).notNull(),
   unit: text('unit').notNull(),
   wasteFactorPct: numeric('waste_factor_pct', { precision: 5, scale: 2 }).default('0').notNull(),
   isSubRecipe: boolean('is_sub_recipe').default(false).notNull(),
-  subRecipeId: uuid('sub_recipe_id')
+  subRecipeId: text('sub_recipe_id')
 });
 
 export const recipeSteps = pgTable('recipe_steps', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  recipeVersionId: uuid('recipe_version_id').references(() => recipeVersions.id).notNull(),
+  id: text('id').primaryKey(),
+  recipeVersionId: text('recipe_version_id').references(() => recipeVersions.id).notNull(),
   stepOrder: integer('step_order').notNull(),
   titleEn: text('title_en').notNull(),
   titleKn: text('title_kn').notNull(),
@@ -51,10 +51,10 @@ export const recipeSteps = pgTable('recipe_steps', {
 });
 
 export const dishes = pgTable('dishes', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  branchId: uuid('branch_id').references(() => branches.id).notNull(),
-  recipeId: uuid('recipe_id').references(() => recipes.id).notNull(),
-  activeVersionId: uuid('active_version_id').references(() => recipeVersions.id).notNull(),
+  id: text('id').primaryKey(),
+  branchId: text('branch_id').references(() => branches.id).notNull(),
+  recipeId: text('recipe_id').references(() => recipes.id).notNull(),
+  activeVersionId: text('active_version_id').references(() => recipeVersions.id).notNull(),
   code: text('code').notNull(),
   nameEn: text('name_en').notNull(),
   nameKn: text('name_kn').notNull(),
@@ -67,12 +67,12 @@ export const dishes = pgTable('dishes', {
 });
 
 export const dishVariants = pgTable('dish_variants', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  dishId: uuid('dish_id').references(() => dishes.id).notNull(),
+  id: text('id').primaryKey(),
+  dishId: text('dish_id').references(() => dishes.id).notNull(),
   nameEn: text('name_en').notNull(),
   nameKn: text('name_kn').notNull(),
   portionQuantity: numeric('portion_quantity', { precision: 12, scale: 3 }).notNull(),
   portionUnit: text('portion_unit').notNull(),
   pricePaise: integer('price_paise').notNull(),
-  packagingItemId: uuid('packaging_item_id').references(() => ingredients.id)
+  packagingItemId: text('packaging_item_id').references(() => ingredients.id)
 });
