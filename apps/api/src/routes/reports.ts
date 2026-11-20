@@ -15,7 +15,8 @@ export const reportRoutes: FastifyPluginAsync = async (fastify) => {
         COALESCE(SUM(CASE WHEN payment_status = 'PAID' THEN total_paise ELSE 0 END), 0)::int as "paidSalesPaise",
         COALESCE(SUM(CASE WHEN channel = 'WALK_IN_POS' THEN 1 ELSE 0 END), 0)::int as "posOrders",
         COALESCE(SUM(CASE WHEN channel = 'QR_TABLE' THEN 1 ELSE 0 END), 0)::int as "qrOrders",
-        COALESCE(SUM(CASE WHEN channel = 'PHONE_PICKUP' THEN 1 ELSE 0 END), 0)::int as "pickupOrders"
+        COALESCE(SUM(CASE WHEN channel = 'PHONE_PICKUP' THEN 1 ELSE 0 END), 0)::int as "pickupOrders",
+        COALESCE(SUM(CASE WHEN channel LIKE 'MOCK_%' THEN 1 ELSE 0 END), 0)::int as "providerOrders"
       FROM orders
     `);
     const sales = ((ordersRes as any).rows || ordersRes)?.[0];
@@ -30,7 +31,8 @@ export const reportRoutes: FastifyPluginAsync = async (fastify) => {
         channelBreakdown: {
           pos: sales?.posOrders ?? 0,
           qr: sales?.qrOrders ?? 0,
-          pickup: sales?.pickupOrders ?? 0
+          pickup: sales?.pickupOrders ?? 0,
+          provider: sales?.providerOrders ?? 0
         }
       }
     };

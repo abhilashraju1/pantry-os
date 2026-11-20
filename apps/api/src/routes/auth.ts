@@ -75,34 +75,6 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     const db = await getDatabase();
 
     if (!token) {
-      // In dev mode fallback if not signed in, check if any user exists
-      const firstUserRes = await db.execute(sql`
-        SELECT id, organization_id, branch_id, email, full_name, phone, roles, is_active
-        FROM users
-        WHERE email = 'admin@pantryos.local' OR 'BRANCH_MANAGER' = ANY(roles)
-        LIMIT 1
-      `);
-      const firstRows = (firstUserRes as any).rows || firstUserRes;
-      if (firstRows?.[0]) {
-        const u = firstRows[0];
-        return {
-          success: true,
-          data: {
-            user: {
-              id: u.id,
-              email: u.email,
-              fullName: u.full_name,
-              phone: u.phone,
-              roles: u.roles,
-              branchId: u.branch_id,
-              organizationId: u.organization_id,
-              isActive: u.is_active
-            },
-            branch: { id: u.branch_id, code: 'BLR-VVP-01', name: 'VV Puram Food Street Branch' }
-          }
-        };
-      }
-
       return reply.status(401).send({
         success: false,
         error: { code: 'UNAUTHORIZED', message: 'Not authenticated' }

@@ -35,6 +35,9 @@ importers:
       '@pantryos/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@pantryos/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       drizzle-orm:
         specifier: ^0.38.3
         version: 0.38.4(@electric-sql/pglite@0.5.16)(@types/pg@8.23.1)(@types/react@19.3.0)(pg@8.23.1)(react@19.3.1)

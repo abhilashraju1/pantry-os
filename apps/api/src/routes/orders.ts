@@ -421,4 +421,79 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
 
     return { success: true, data: { id, status: nextStatus } };
   });
+
+  // Cancel order & release batch / ingredient reservations
+  fastify.post('/orders/:id/cancel', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { reason } = (request.body as { reason?: string }) || {};
+    const db = await getDatabase();
+
+    const orderRes = await db.execute(sql`SELECT id, status FROM orders WHERE id = ${id}`);
+    const order = ((orderRes as any).rows || orderRes)?.[0];
+
+    if (!order) {
+      return reply.status(404).send({ success: false, error: { code: 'ORDER_NOT_FOUND', message: 'Order not found' } });
+    }
+
+    if (order.status === 'CANCELLED') {
+      return reply.status(400).send({ success: false, error: { code: 'ALREADY_CANCELLED', message: 'Order is already cancelled' } });
+    }
+
+    if (order.status === 'COMPLETED' || order.status === 'SERVED') {
+      return reply.status(400).send({ success: false, error: { code: 'CANNOT_CANCEL', message: `Cannot cancel order in ${order.status} state` } });
+    }
+
+    await db.transaction(async (tx: any) => {
+      // 1. Mark order cancelled
+      await tx.execute(sql`
+        UPDATE orders
+        SET status = 'CANCELLED',
+            notes = COALESCE(notes, '') || ' | Cancelled: ' || ${reason || 'Operator cancellation'}
+        WHERE id = ${id}
+      `);
+
+      // 2. Find and release batch reservations
+      const reservationsRes = await tx.execute(sql`
+        SELECT id, batch_id, quantity_deducted::float as quantity_deducted
+        FROM batch_reservations
+        WHERE order_item_id = ${id} AND status = 'RESERVED'
+      `);
+      const reservations = (reservationsRes as any).rows || reservationsRes;
+
+      for (const res of reservations) {
+        await tx.execute(sql`
+          UPDATE production_batches
+          SET remaining_usable_yield = remaining_usable_yield + ${res.quantity_deducted}
+          WHERE id = ${res.batch_id}
+        `);
+
+        await tx.execute(sql`
+          UPDATE batch_reservations
+          SET status = 'CANCELLED'
+          WHERE id = ${res.id}
+        `);
+      }
+
+      // 3. Return flour if fresh order
+      const itemsRes = await tx.execute(sql`
+        SELECT oi.quantity, d.preparation_policy
+        FROM order_items oi
+        JOIN dishes d ON oi.dish_id = d.id
+        WHERE oi.order_id = ${id}
+      `);
+      const items = (itemsRes as any).rows || itemsRes;
+      for (const item of items) {
+        if (item.preparation_policy === 'FRESH_ORDER') {
+          const flourReturn = item.quantity * 120;
+          await tx.execute(sql`
+            UPDATE ingredients
+            SET current_stock = current_stock + ${flourReturn}
+            WHERE id = 'ing-rice-flour' OR code = 'ING-003'
+          `);
+        }
+      }
+    });
+
+    return { success: true, data: { id, status: 'CANCELLED', reason } };
+  });
 };

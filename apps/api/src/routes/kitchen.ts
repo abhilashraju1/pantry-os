@@ -38,7 +38,7 @@ export const kitchenRoutes: FastifyPluginAsync = async (fastify) => {
 
     const db = await getDatabase();
     const eqRes = await db.execute(sql`
-      SELECT id, code, name_en, type, is_exclusive, current_task_id, locked_until
+      SELECT id, code, name_en, type, status, is_exclusive, current_task_id, locked_until
       FROM kitchen_equipment
       WHERE id = ${equipmentId}
       LIMIT 1
@@ -49,6 +49,16 @@ export const kitchenRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(404).send({
         success: false,
         error: { code: 'EQUIPMENT_NOT_FOUND', message: 'Equipment not found' }
+      });
+    }
+
+    if (eq.status === 'MAINTENANCE' || eq.status === 'OFFLINE') {
+      return reply.status(409).send({
+        success: false,
+        error: {
+          code: 'EQUIPMENT_OUT_OF_SERVICE',
+          message: `Equipment ${eq.code} (${eq.name_en}) is currently ${eq.status} and cannot be locked.`
+        }
       });
     }
 
@@ -149,5 +159,20 @@ export const kitchenRoutes: FastifyPluginAsync = async (fastify) => {
     `);
 
     return { success: true, data: { id, currentStepOrder: nextStepOrder, status: 'IN_PROGRESS' } };
+  });
+
+  // Admin/Chef: update equipment status (e.g. MAINTENANCE, AVAILABLE, OFFLINE)
+  fastify.patch('/equipment/:id/status', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { status } = request.body as { status: string };
+
+    const db = await getDatabase();
+    await db.execute(sql`
+      UPDATE kitchen_equipment
+      SET status = ${status}
+      WHERE id = ${id}
+    `);
+
+    return { success: true, data: { id, status } };
   });
 };

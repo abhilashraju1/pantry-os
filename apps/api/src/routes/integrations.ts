@@ -94,14 +94,56 @@ export const integrationRoutes: FastifyPluginAsync = async (fastify) => {
     const orderNum = `ORD-${provider.toUpperCase()}-${Date.now().toString().slice(-6)}`;
     const channel = provider === 'ONDC' ? 'MOCK_ONDC' : provider === 'SWIGGY' ? 'MOCK_SWIGGY' : 'MOCK_ZOMATO';
 
-    await db.execute(sql`
-      INSERT INTO orders (id, branch_id, order_number, channel, status, customer_name, subtotal_paise, tax_paise, total_paise, payment_status, notes)
-      VALUES (
-        ${orderId}, 'branch-blr-vvp-01', ${orderNum}, ${channel}, 'ACCEPTED',
-        ${customerName || provider + ' Customer'}, ${totalPaise || 9000}, 0, ${totalPaise || 9000}, 'PAID',
-        ${`Provider: ${provider}, ID: ${providerOrderId}`}
-      )
-    `);
+    await db.transaction(async (tx: any) => {
+      await tx.execute(sql`
+        INSERT INTO orders (id, branch_id, order_number, channel, status, customer_name, subtotal_paise, tax_paise, total_paise, payment_status, notes)
+        VALUES (
+          ${orderId}, 'branch-blr-vvp-01', ${orderNum}, ${channel}, 'ACCEPTED',
+          ${customerName || provider + ' Customer'}, ${totalPaise || 9000}, 0, ${totalPaise || 9000}, 'PAID',
+          ${`Provider: ${provider}, ID: ${providerOrderId}`}
+        )
+      `);
+
+      // Allocate batch reservation if items provided
+      if (items && Array.isArray(items) && items.length > 0) {
+        for (const raw of items) {
+          const vRes = await tx.execute(sql`
+            SELECT v.id, v.dish_id, v.portion_quantity::float as portion_quantity,
+                   d.preparation_policy, d.name_en as dish_name_en
+            FROM dish_variants v
+            JOIN dishes d ON v.dish_id = d.id
+            WHERE v.id = ${raw.dishVariantId}
+            LIMIT 1
+          `);
+          const v = ((vRes as any).rows || vRes)?.[0];
+          if (v && v.preparation_policy === 'READY_BATCH') {
+            const neededAmount = raw.quantity * v.portion_quantity;
+            const batchRes = await tx.execute(sql`
+              SELECT id, remaining_usable_yield::float as remaining_yield
+              FROM production_batches
+              WHERE dish_id = ${v.dish_id}
+                AND (status = 'READY' OR status = 'HOLDING')
+                AND remaining_usable_yield >= ${neededAmount}
+              ORDER BY expires_at ASC
+              LIMIT 1
+              FOR UPDATE
+            `);
+            const batch = ((batchRes as any).rows || batchRes)?.[0];
+            if (batch) {
+              await tx.execute(sql`
+                UPDATE production_batches
+                SET remaining_usable_yield = remaining_usable_yield - ${neededAmount}
+                WHERE id = ${batch.id}
+              `);
+              await tx.execute(sql`
+                INSERT INTO batch_reservations (id, batch_id, order_item_id, portions_reserved, quantity_deducted, unit, status)
+                VALUES (${'res-' + crypto.randomUUID()}, ${batch.id}, ${orderId}, ${raw.quantity}, ${neededAmount}, 'g', 'RESERVED')
+              `);
+            }
+          }
+        }
+      }
+    });
 
     return {
       success: true,
@@ -112,7 +154,7 @@ export const integrationRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
-  // Mock Cancellation
+  // Mock Cancellation with Reservation Release
   fastify.post('/integrations/mock-cancel', async (request, reply) => {
     const { providerOrderId, reason } = request.body as { providerOrderId: string; reason?: string };
     const db = await getDatabase();
@@ -126,12 +168,35 @@ export const integrationRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(404).send({ success: false, error: { code: 'ORDER_NOT_FOUND', message: 'Order not found' } });
     }
 
-    await db.execute(sql`
-      UPDATE orders
-      SET status = 'CANCELLED',
-          notes = COALESCE(notes, '') || ' | Cancelled: ' || ${reason || 'Customer request'}
-      WHERE id = ${order.id}
-    `);
+    await db.transaction(async (tx: any) => {
+      await tx.execute(sql`
+        UPDATE orders
+        SET status = 'CANCELLED',
+            notes = COALESCE(notes, '') || ' | Cancelled: ' || ${reason || 'Customer request'}
+        WHERE id = ${order.id}
+      `);
+
+      // Release reservations
+      const reservationsRes = await tx.execute(sql`
+        SELECT id, batch_id, quantity_deducted::float as quantity_deducted
+        FROM batch_reservations
+        WHERE order_item_id = ${order.id} AND status = 'RESERVED'
+      `);
+      const reservations = (reservationsRes as any).rows || reservationsRes;
+
+      for (const res of reservations) {
+        await tx.execute(sql`
+          UPDATE production_batches
+          SET remaining_usable_yield = remaining_usable_yield + ${res.quantity_deducted}
+          WHERE id = ${res.batch_id}
+        `);
+        await tx.execute(sql`
+          UPDATE batch_reservations
+          SET status = 'CANCELLED'
+          WHERE id = ${res.id}
+        `);
+      }
+    });
 
     return {
       success: true,

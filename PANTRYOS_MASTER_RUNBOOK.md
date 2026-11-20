@@ -1,7 +1,7 @@
 # PANTRYOS — MASTER OPERATIONS, TESTING & CLOUDFLARE DEPLOYMENT RUNBOOK
 **Project:** Smart Karnataka Vegetarian Pantry, Kitchen, POS & Commerce Platform  
 **Repository:** [https://github.com/abhilashraju1/pantry-os.git](https://github.com/abhilashraju1/pantry-os.git)  
-**Version:** 2.0 Consolidated | **Updated:** 18 November 2026
+**Version:** 2.1 Consolidated | **Updated:** 20 November 2026
 
 ---
 
@@ -30,7 +30,7 @@ pnpm run db:seed          # Seeds authentic synthetic demo data (3 dishes, staff
 # 4. Build all workspace packages (contracts, business rules, i18n, ui, database, api, web)
 pnpm run build
 
-# 5. Run test suite (35 automated unit, integration, and E2E scenario tests)
+# 5. Run test suite (42 automated unit, integration, and E2E scenario tests covering Scenarios A through I)
 pnpm test
 
 # 6. Typecheck all workspaces
