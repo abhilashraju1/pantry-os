@@ -27,6 +27,7 @@ export const CashierPOSView: React.FC<CashierPOSViewProps> = ({ locale, dishes, 
   const [customerPhone, setCustomerPhone] = useState('');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [discountPaise, setDiscountPaise] = useState(0);
+  const [successBanner, setSuccessBanner] = useState<string | null>(null);
 
   const subtotalPaise = cart.reduce((sum, item) => sum + item.pricePaise * item.quantity, 0);
   const packagingFee = selectedChannel === 'PHONE_PICKUP' ? cart.length * 500 : 0;
@@ -84,29 +85,48 @@ export const CashierPOSView: React.FC<CashierPOSViewProps> = ({ locale, dishes, 
     onOrderCreated(payload);
     setCart([]);
     setIsPaymentModalOpen(false);
-    alert(`Order placed & paid successfully via ${paymentMethod}! Total: ${formatINR(totals.totalPaise)}`);
+    setSuccessBanner(
+      `Order placed & paid successfully via ${paymentMethod}! Total: ${formatINR(totals.totalPaise)}`
+    );
+    setTimeout(() => setSuccessBanner(null), 5000);
   };
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 65px)', overflow: 'hidden' }}>
-      {/* Left Menu Area (65%) */}
-      <div style={{ flex: '1 1 65%', padding: '20px', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#234B3A' }}>
+    <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', minHeight: 'calc(100vh - 56px)', backgroundColor: '#FAF8F3' }}>
+      {/* Left Menu Area */}
+      <div style={{ flex: '1 1 58%', minWidth: 'min(320px, 100%)', padding: '16px', boxSizing: 'border-box', overflowY: 'auto' }}>
+        {successBanner && (
+          <div
+            style={{
+              backgroundColor: '#DEF7EC',
+              color: '#03543F',
+              padding: '10px 14px',
+              borderRadius: '6px',
+              marginBottom: '14px',
+              fontSize: '13px',
+              fontWeight: 600
+            }}
+          >
+            {successBanner}
+          </div>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#234B3A', margin: 0 }}>
             {locale === 'kn' ? 'ಮೆನು ಮತ್ತು ಪದಾರ್ಥಗಳು' : 'Pantry Menu Items'}
           </h2>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             <button
               onClick={() => setSelectedChannel('WALK_IN_POS')}
               style={{
-                padding: '8px 14px',
+                padding: '6px 12px',
                 borderRadius: '6px',
                 border: 'none',
                 backgroundColor: selectedChannel === 'WALK_IN_POS' ? '#234B3A' : '#E9E6DD',
                 color: selectedChannel === 'WALK_IN_POS' ? '#FFFFFF' : '#2A2E2B',
                 fontWeight: 600,
-                fontSize: '13px',
-                cursor: 'pointer'
+                fontSize: '12px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
               }}
             >
               {locale === 'kn' ? 'ಕೌಂಟರ್ ವಾಕ್-ಇನ್' : 'Counter Walk-In'}
@@ -114,14 +134,15 @@ export const CashierPOSView: React.FC<CashierPOSViewProps> = ({ locale, dishes, 
             <button
               onClick={() => setSelectedChannel('QR_TABLE')}
               style={{
-                padding: '8px 14px',
+                padding: '6px 12px',
                 borderRadius: '6px',
                 border: 'none',
                 backgroundColor: selectedChannel === 'QR_TABLE' ? '#234B3A' : '#E9E6DD',
                 color: selectedChannel === 'QR_TABLE' ? '#FFFFFF' : '#2A2E2B',
                 fontWeight: 600,
-                fontSize: '13px',
-                cursor: 'pointer'
+                fontSize: '12px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
               }}
             >
               {locale === 'kn' ? 'ಟೇಬಲ್ ಡೈನ್-ಇನ್' : 'Table Dine-In'}
@@ -129,14 +150,15 @@ export const CashierPOSView: React.FC<CashierPOSViewProps> = ({ locale, dishes, 
             <button
               onClick={() => setSelectedChannel('PHONE_PICKUP')}
               style={{
-                padding: '8px 14px',
+                padding: '6px 12px',
                 borderRadius: '6px',
                 border: 'none',
                 backgroundColor: selectedChannel === 'PHONE_PICKUP' ? '#234B3A' : '#E9E6DD',
                 color: selectedChannel === 'PHONE_PICKUP' ? '#FFFFFF' : '#2A2E2B',
                 fontWeight: 600,
-                fontSize: '13px',
-                cursor: 'pointer'
+                fontSize: '12px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
               }}
             >
               {locale === 'kn' ? 'ಫೋನ್ ಪಿಕಪ್' : 'Phone Pickup'}
@@ -216,15 +238,16 @@ export const CashierPOSView: React.FC<CashierPOSViewProps> = ({ locale, dishes, 
         </div>
       </div>
 
-      {/* Right Cart & Checkout Pane (35%) */}
+      {/* Right Cart & Checkout Pane */}
       <div
         style={{
-          flex: '1 1 35%',
+          flex: '1 1 360px',
+          minWidth: 'min(320px, 100%)',
           backgroundColor: '#FFFFFF',
           borderLeft: '1px solid #E9E6DD',
           display: 'flex',
           flexDirection: 'column',
-          height: '100%'
+          boxSizing: 'border-box'
         }}
       >
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #E9E6DD' }}>

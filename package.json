@@ -17,7 +17,8 @@
     "typecheck": "pnpm -r run typecheck",
     "db:migrate": "pnpm --filter @pantryos/database run db:migrate",
     "db:seed": "pnpm --filter @pantryos/database run db:seed",
-    "db:reset-demo": "pnpm --filter @pantryos/database run db:reset-demo"
+    "db:reset-demo": "pnpm --filter @pantryos/database run db:reset-demo",
+    "db:bootstrap": "pnpm --filter @pantryos/database run db:bootstrap"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

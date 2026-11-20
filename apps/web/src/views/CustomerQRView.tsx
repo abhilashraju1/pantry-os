@@ -2,26 +2,28 @@ import React, { useState } from 'react';
 import { Locale, getDictionary } from '@pantryos/i18n';
 import { Dish, Order } from '@pantryos/contracts';
 import { formatINR } from '@pantryos/business-rules';
-import { ShoppingBag, ChevronRight, X, UtensilsCrossed, CheckCircle2 } from 'lucide-react';
+import { ShoppingBag, ChevronRight, X, UtensilsCrossed, CheckCircle2, Clock, Receipt } from 'lucide-react';
 
 interface CustomerQRViewProps {
   locale: Locale;
   dishes: Dish[];
   activeTableNumber: string;
-  onTableChange: (tableNum: string) => void;
   tableOrders: Order[];
   onPlaceOrder: (items: Array<{ dishVariantId: string; quantity: number }>) => void;
-  onRequestBill: () => void;
+  onRequestBill: () => Promise<void> | void;
+  onLocaleChange: (loc: Locale) => void;
+  tableSessionStatus?: 'ACTIVE' | 'BILL_REQUESTED' | 'CLOSED';
 }
 
 export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
   locale,
   dishes,
   activeTableNumber,
-  onTableChange,
   tableOrders,
   onPlaceOrder,
-  onRequestBill
+  onRequestBill,
+  onLocaleChange,
+  tableSessionStatus = 'ACTIVE'
 }) => {
   const dict = getDictionary(locale);
   const [cart, setCart] = useState<{ [variantId: string]: number }>({});
@@ -29,6 +31,7 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
   const [orderSuccessMessage, setOrderSuccessMessage] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<'ALL' | 'READY_BATCH' | 'FRESH_ORDER'>('ALL');
+  const [billRequested, setBillRequested] = useState(tableSessionStatus === 'BILL_REQUESTED');
 
   const totalCartCount = Object.values(cart).reduce((a, b) => a + b, 0);
 
@@ -44,6 +47,7 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
   };
 
   const handleAddToCart = (variantId: string) => {
+    if (tableSessionStatus === 'CLOSED') return;
     setCart((prev) => ({
       ...prev,
       [variantId]: (prev[variantId] || 0) + 1
@@ -68,6 +72,11 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
     setTimeout(() => setOrderSuccessMessage(null), 5000);
   };
 
+  const handleBillRequest = async () => {
+    setBillRequested(true);
+    await onRequestBill();
+  };
+
   const filteredDishes = dishes.filter((dish) => {
     if (selectedCategory === 'ALL') return true;
     return dish.preparationPolicy === selectedCategory;
@@ -78,292 +87,213 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
       style={{
         maxWidth: '480px',
         margin: '0 auto',
-        minHeight: 'calc(100vh - 65px)',
         backgroundColor: '#FAF8F3',
+        minHeight: '100vh',
+        boxShadow: '0 0 20px rgba(0,0,0,0.06)',
         display: 'flex',
         flexDirection: 'column',
-        position: 'relative',
-        boxShadow: '0 0 20px rgba(0,0,0,0.06)'
+        position: 'relative'
       }}
     >
-      {/* Mobile Top Bar */}
-      <div
+      {/* Dedicated Guest Customer Header */}
+      <header
         style={{
-          padding: '14px 18px',
-          backgroundColor: '#FFFFFF',
-          borderBottom: '1px solid #E9E6DD',
+          backgroundColor: '#234B3A',
+          color: '#FFFFFF',
+          padding: '12px 16px',
           display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          position: 'sticky',
+          top: 0,
+          zIndex: 40
         }}
       >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span
-              style={{
-                backgroundColor: '#234B3A',
-                color: '#FFFFFF',
-                padding: '4px 10px',
-                borderRadius: '20px',
-                fontSize: '12px',
-                fontWeight: 700
-              }}
-            >
-              {dict.orders.tableNumber} {activeTableNumber}
-            </span>
-            <select
-              value={activeTableNumber}
-              onChange={(e) => onTableChange(e.target.value)}
-              style={{
-                fontSize: '11px',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                border: '1px solid #D79B52',
-                backgroundColor: '#FAF8F3',
-                color: '#234B3A',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              <option value="T1">T1</option>
-              <option value="T2">T2</option>
-              <option value="T3">T3</option>
-              <option value="T4">T4</option>
-              <option value="T5">T5</option>
-              <option value="T6">T6</option>
-            </select>
-          </div>
-          <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#2A2E2B', marginTop: '4px' }}>
-            {dict.common.brandName}
-          </h2>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <span style={{ fontSize: '11px', color: '#1B6E44', fontWeight: 700, display: 'block' }}>
-            ● PURE VEGETARIAN
-          </span>
-          <span style={{ fontSize: '11px', color: '#6B726B' }}>
-            VV Puram, Bengaluru
-          </span>
-        </div>
-      </div>
-
-      {/* Success Notification Alert */}
-      {orderSuccessMessage && (
-        <div
-          style={{
-            margin: '12px 16px 0',
-            padding: '12px 16px',
-            backgroundColor: '#EBF4F0',
-            border: '1px solid #1B6E44',
-            borderRadius: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            color: '#1B6E44',
-            fontSize: '13px',
-            fontWeight: 600
-          }}
-        >
-          <CheckCircle2 size={18} />
-          <span>{orderSuccessMessage}</span>
-        </div>
-      )}
-
-      {/* Running Table Bill Banner (Petpooja QR Pattern) */}
-      {tableOrders.length > 0 && (
-        <div
-          style={{
-            margin: '12px 16px 0',
-            padding: '12px 16px',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #A0D2BB',
-            borderRadius: '10px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
-          }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img
+            src="/demo-media/branding/logo.svg"
+            alt="PantryOS Logo"
+            style={{ width: '28px', height: '28px', borderRadius: '6px' }}
+          />
           <div>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#234B3A' }}>
-              {locale === 'kn' ? 'ಚಾಲ್ತಿ ಟೇಬಲ್ ಆರ್ಡರ್' : 'Active Table Session'}
-            </span>
-            <p style={{ fontSize: '12px', color: '#2A2E2B', marginTop: '2px' }}>
-              {tableOrders.length} {locale === 'kn' ? 'ಆರ್ಡರ್‌ಗಳು ಚಾಲನೆಯಲ್ಲಿವೆ' : 'orders placed'}
+            <h1 style={{ fontSize: '15px', fontWeight: 700, margin: 0, lineHeight: 1.1 }}>
+              {dict.common.brandName}
+            </h1>
+            <p style={{ fontSize: '10px', color: '#D79B52', margin: 0 }}>
+              VV Puram Traditional Pantry
             </p>
           </div>
-          <button
-            onClick={onRequestBill}
+        </div>
+
+        {/* Read-Only Table Badge & Language Switcher */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span
             style={{
-              padding: '8px 14px',
-              backgroundColor: '#234B3A',
+              backgroundColor: '#D79B52',
+              color: '#FFFFFF',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: 700
+            }}
+          >
+            Table {activeTableNumber}
+          </span>
+          <button
+            onClick={() => onLocaleChange(locale === 'kn' ? 'en' : 'kn')}
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.18)',
               color: '#FFFFFF',
               border: 'none',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: 700,
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              fontWeight: 600,
               cursor: 'pointer'
             }}
           >
-            {dict.orders.requestBill}
+            {locale === 'kn' ? 'English' : 'ಕನ್ನಡ'}
           </button>
+        </div>
+      </header>
+
+      {/* Session Closed Banner */}
+      {tableSessionStatus === 'CLOSED' && (
+        <div
+          style={{
+            backgroundColor: '#FEF3C7',
+            color: '#92400E',
+            padding: '10px 16px',
+            fontSize: '12px',
+            fontWeight: 600,
+            textAlign: 'center',
+            borderBottom: '1px solid #FDE68A'
+          }}
+        >
+          {locale === 'kn'
+            ? 'ಈ ಟೇಬಲ್‌ನ ಸೇಶನ್ ಮುಕ್ತಾಯಗೊಂಡಿದೆ. ದಯವಿಟ್ಟು ಹೊಸ ಸೇಶನ್‌ಗಾಗಿ QR ಸ್ಕ್ಯಾನ್ ಮಾಡಿ.'
+            : 'This table session has ended. Please scan the table QR code to start a new dining session.'}
         </div>
       )}
 
-      {/* Category Pills Filter */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '8px',
-          padding: '12px 16px 4px',
-          overflowX: 'auto',
-          whiteSpace: 'nowrap'
-        }}
-      >
-        <button
-          onClick={() => setSelectedCategory('ALL')}
+      {/* Bill Requested Alert */}
+      {billRequested && (
+        <div
           style={{
-            padding: '6px 14px',
-            borderRadius: '20px',
-            border: 'none',
-            backgroundColor: selectedCategory === 'ALL' ? '#234B3A' : '#E9E6DD',
-            color: selectedCategory === 'ALL' ? '#FFFFFF' : '#2A2E2B',
+            backgroundColor: '#DEF7EC',
+            color: '#03543F',
+            padding: '10px 16px',
             fontSize: '12px',
             fontWeight: 600,
-            cursor: 'pointer'
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            borderBottom: '1px solid #BCF0DA'
           }}
         >
-          {locale === 'kn' ? 'ಎಲ್ಲವೂ' : 'All Items'}
-        </button>
-        <button
-          onClick={() => setSelectedCategory('READY_BATCH')}
-          style={{
-            padding: '6px 14px',
-            borderRadius: '20px',
-            border: 'none',
-            backgroundColor: selectedCategory === 'READY_BATCH' ? '#234B3A' : '#E9E6DD',
-            color: selectedCategory === 'READY_BATCH' ? '#FFFFFF' : '#2A2E2B',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer'
-          }}
-        >
-          {locale === 'kn' ? 'ಇಂದಿನ ವಿಶೇಷ (Ready)' : 'Fresh Today (Ready)'}
-        </button>
-        <button
-          onClick={() => setSelectedCategory('FRESH_ORDER')}
-          style={{
-            padding: '6px 14px',
-            borderRadius: '20px',
-            border: 'none',
-            backgroundColor: selectedCategory === 'FRESH_ORDER' ? '#234B3A' : '#E9E6DD',
-            color: selectedCategory === 'FRESH_ORDER' ? '#FFFFFF' : '#2A2E2B',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer'
-          }}
-        >
-          {locale === 'kn' ? 'ಬಿಸಿ ರೊಟ್ಟಿಗಳು (Fresh)' : 'Hot Rottis (Fresh)'}
-        </button>
-      </div>
+          <Receipt size={16} />
+          <span>
+            {locale === 'kn'
+              ? 'ಬಿಲ್ ವಿನಂತಿಸಲಾಗಿದೆ! ಕ್ಯಾಷಿಯರ್ ನಿಮ್ಮ ಟೇಬಲ್‌ಗೆ ಬಿಲ್ ತರಲಿದ್ದಾರೆ.'
+              : 'Bill requested! Cashier will present the bill at your table shortly.'}
+          </span>
+        </div>
+      )}
 
-      {/* Food Items List */}
-      <div style={{ padding: '16px', flex: 1, paddingBottom: totalCartCount > 0 ? '90px' : '20px' }}>
+      {/* Main Content Area */}
+      <div style={{ flex: 1, padding: '16px', paddingBottom: totalCartCount > 0 ? '80px' : '24px' }}>
+        {/* Category Filters */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', overflowX: 'auto', paddingBottom: '4px' }}>
+          {[
+            { id: 'ALL', en: 'All Specialties', kn: 'ಎಲ್ಲಾ ತಿನಿಸುಗಳು' },
+            { id: 'READY_BATCH', en: 'Hot Ready Pots', kn: 'ಸಿದ್ಧ ಬಿಸಿ ಪಾತ್ರೆಗಳು' },
+            { id: 'FRESH_ORDER', en: 'Crispy Fresh Tawa', kn: 'ಗರಿಗರಿ ತಾಜಾ ಹಂಚು' }
+          ].map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id as any)}
+              style={{
+                backgroundColor: selectedCategory === cat.id ? '#234B3A' : '#FFFFFF',
+                color: selectedCategory === cat.id ? '#FFFFFF' : '#444',
+                border: '1px solid #D5D0C5',
+                padding: '6px 12px',
+                borderRadius: '16px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {locale === 'kn' ? cat.kn : cat.en}
+            </button>
+          ))}
+        </div>
+
+        {/* Dish List */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {filteredDishes.map((dish) => {
             const variant = dish.variants[0];
-            const currentQty = cart[variant.id] || 0;
+            const isSoldOut = (dish as any).isSoldOut;
 
             return (
               <div
                 key={dish.id}
                 style={{
                   backgroundColor: '#FFFFFF',
-                  borderRadius: '14px',
-                  border: '1px solid #E9E6DD',
-                  overflow: 'hidden',
+                  borderRadius: '10px',
+                  padding: '12px',
+                  border: '1px solid #EAE6DC',
                   display: 'flex',
                   gap: '12px',
-                  padding: '12px',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+                  alignItems: 'center'
                 }}
               >
                 <img
                   src={dish.imageUrl}
                   alt={dish.nameEn}
                   style={{
-                    width: '95px',
-                    height: '95px',
-                    borderRadius: '10px',
+                    width: '80px',
+                    height: '80px',
                     objectFit: 'cover',
-                    flexShrink: 0
+                    borderRadius: '8px',
+                    backgroundColor: '#F3EFE6'
                   }}
                 />
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div>
-                    <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#2A2E2B' }}>
-                      {locale === 'kn' ? dish.nameKn : dish.nameEn}
-                    </h4>
-                    <p style={{ fontSize: '12px', color: '#6B726B', marginTop: '2px', lineHeight: 1.3 }}>
-                      {locale === 'kn' ? dish.descriptionKn : dish.descriptionEn}
-                    </p>
-                  </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-                    <span style={{ fontSize: '15px', fontWeight: 700, color: '#234B3A' }}>
-                      {formatINR(variant.pricePaise)}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#234B3A', margin: 0 }}>
+                      {locale === 'kn' ? dish.nameKn : dish.nameEn}
+                    </h3>
+                  </div>
+                  <p style={{ fontSize: '11px', color: '#666', margin: '4px 0 6px 0', lineHeight: 1.3 }}>
+                    {locale === 'kn' ? dish.descriptionKn : dish.descriptionEn}
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#2A2E2B' }}>
+                      {variant ? formatINR(variant.pricePaise) : ''}
                     </span>
 
-                    {currentQty > 0 ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button
-                          onClick={() =>
-                            setCart((prev) => ({ ...prev, [variant.id]: Math.max(0, (prev[variant.id] || 0) - 1) }))
-                          }
-                          style={{
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '4px',
-                            border: '1px solid #D79B52',
-                            backgroundColor: '#FFFFFF',
-                            cursor: 'pointer',
-                            fontWeight: 700
-                          }}
-                        >
-                          -
-                        </button>
-                        <span style={{ fontSize: '14px', fontWeight: 700 }}>{currentQty}</span>
-                        <button
-                          onClick={() => handleAddToCart(variant.id)}
-                          style={{
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '4px',
-                            border: '1px solid #D79B52',
-                            backgroundColor: '#D79B52',
-                            color: '#FFFFFF',
-                            cursor: 'pointer',
-                            fontWeight: 700
-                          }}
-                        >
-                          +
-                        </button>
-                      </div>
+                    {isSoldOut ? (
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#DC2626' }}>
+                        {locale === 'kn' ? 'ಖಾಲಿಯಾಗಿದೆ' : 'Sold Out'}
+                      </span>
                     ) : (
                       <button
-                        onClick={() => setSelectedDishForModal(dish)}
+                        disabled={tableSessionStatus === 'CLOSED'}
+                        onClick={() => variant && handleAddToCart(variant.id)}
                         style={{
-                          backgroundColor: '#FAF8F3',
-                          border: '1px solid #D79B52',
-                          color: '#D79B52',
-                          padding: '6px 14px',
-                          borderRadius: '8px',
+                          backgroundColor: tableSessionStatus === 'CLOSED' ? '#CCC' : '#234B3A',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
                           fontSize: '12px',
                           fontWeight: 700,
-                          cursor: 'pointer'
+                          cursor: tableSessionStatus === 'CLOSED' ? 'not-allowed' : 'pointer'
                         }}
                       >
-                        + {locale === 'kn' ? 'ಆಯ್ಕೆ ಮಾಡಿ' : 'Add'}
+                        {locale === 'kn' ? '+ ಸೇರಿಸಿ' : '+ Add'}
                       </button>
                     )}
                   </div>
@@ -372,245 +302,126 @@ export const CustomerQRView: React.FC<CustomerQRViewProps> = ({
             );
           })}
         </div>
+
+        {/* Existing Table Orders / Bill Section */}
+        {tableOrders.length > 0 && (
+          <div
+            style={{
+              marginTop: '24px',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '10px',
+              padding: '14px',
+              border: '1px solid #EAE6DC'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#234B3A', margin: 0 }}>
+                {locale === 'kn' ? `ಟೇಬಲ್ ${activeTableNumber} ಆರ್ಡರ್‌ಗಳು` : `Table ${activeTableNumber} Orders`}
+              </h3>
+              <span style={{ fontSize: '11px', color: '#888' }}>
+                {tableOrders.length} {tableOrders.length === 1 ? 'round' : 'rounds'}
+              </span>
+            </div>
+
+            {tableOrders.map((ord, idx) => (
+              <div
+                key={ord.id}
+                style={{
+                  borderTop: idx > 0 ? '1px dashed #E5E5E5' : 'none',
+                  paddingTop: idx > 0 ? '8px' : '0',
+                  marginTop: idx > 0 ? '8px' : '0'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 600 }}>
+                  <span>Round {idx + 1} ({ord.orderNumber})</span>
+                  <span>{formatINR(ord.totalPaise)}</span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                  Status: {ord.status} • Payment: {ord.paymentStatus}
+                </div>
+              </div>
+            ))}
+
+            <div style={{ borderTop: '1px solid #DDD', marginTop: '12px', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700 }}>
+                {locale === 'kn' ? 'ಒಟ್ಟು ಮೊತ್ತ' : 'Total Bill'}:
+              </span>
+              <span style={{ fontSize: '15px', fontWeight: 700, color: '#234B3A' }}>
+                {formatINR(tableOrders.reduce((sum, o) => sum + o.totalPaise, 0))}
+              </span>
+            </div>
+
+            {!billRequested && tableSessionStatus !== 'CLOSED' && (
+              <button
+                onClick={handleBillRequest}
+                style={{
+                  width: '100%',
+                  marginTop: '12px',
+                  padding: '10px',
+                  backgroundColor: '#D79B52',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {locale === 'kn' ? 'ಬಿಲ್ ವಿನಂತಿಸಿ (Request Bill)' : 'Request Bill from Cashier'}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Sticky Bottom Cart Bar (Square & Petpooja Pattern) */}
+      {/* Floating Sticky Cart Bar */}
       {totalCartCount > 0 && (
         <div
           style={{
-            position: 'sticky',
+            position: 'fixed',
             bottom: 0,
             left: 0,
             right: 0,
-            backgroundColor: '#FFFFFF',
-            borderTop: '1px solid #E9E6DD',
-            padding: '12px 16px',
-            boxShadow: '0 -4px 16px rgba(0,0,0,0.08)',
-            zIndex: 40
+            backgroundColor: '#234B3A',
+            color: '#FFFFFF',
+            padding: '12px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
+            zIndex: 50,
+            maxWidth: '480px',
+            margin: '0 auto'
           }}
         >
-          <div
-            onClick={() => setIsCartSheetOpen(true)}
+          <div>
+            <div style={{ fontSize: '12px', color: '#D79B52', fontWeight: 600 }}>
+              {totalCartCount} {totalCartCount === 1 ? 'item' : 'items'}
+            </div>
+            <div style={{ fontSize: '16px', fontWeight: 700 }}>
+              {formatINR(calculateCartTotalPaise())}
+            </div>
+          </div>
+
+          <button
+            onClick={handleCheckout}
             style={{
-              backgroundColor: '#234B3A',
+              backgroundColor: '#D79B52',
               color: '#FFFFFF',
-              borderRadius: '12px',
-              padding: '14px 18px',
+              border: 'none',
+              padding: '10px 18px',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
-              cursor: 'pointer'
+              gap: '6px'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <ShoppingBag size={20} color="#D79B52" />
-              <div>
-                <span style={{ fontSize: '14px', fontWeight: 700 }}>
-                  {totalCartCount} {dict.orders.itemsCount}
-                </span>
-                <span style={{ margin: '0 6px', opacity: 0.6 }}>•</span>
-                <span style={{ fontSize: '15px', fontWeight: 700, color: '#D79B52' }}>
-                  {formatINR(calculateCartTotalPaise())}
-                </span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 700 }}>
-              <span>{locale === 'kn' ? 'ಆರ್ಡರ್ ನೋಡಿ' : 'View Order'}</span>
-              <ChevronRight size={18} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Item Customizer Bottom Sheet */}
-      {selectedDishForModal && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'center',
-            zIndex: 100
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderTopLeftRadius: '20px',
-              borderTopRightRadius: '20px',
-              padding: '24px',
-              maxWidth: '480px',
-              width: '100%'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#2A2E2B' }}>
-                  {locale === 'kn' ? selectedDishForModal.nameKn : selectedDishForModal.nameEn}
-                </h3>
-                <p style={{ fontSize: '13px', color: '#6B726B', marginTop: '2px' }}>
-                  {locale === 'kn' ? selectedDishForModal.descriptionKn : selectedDishForModal.descriptionEn}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedDishForModal(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
-              >
-                <X size={20} color="#6B726B" />
-              </button>
-            </div>
-
-            <div style={{ margin: '20px 0' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#234B3A', marginBottom: '8px' }}>
-                {locale === 'kn' ? 'ಪ್ರಮಾಣ / ಪೋರ್ಷನ್ ಆಯ್ಕೆ ಮಾಡಿ:' : 'Choose Portion Size:'}
-              </label>
-              {selectedDishForModal.variants.map((v) => (
-                <div
-                  key={v.id}
-                  onClick={() => handleAddToCart(v.id)}
-                  style={{
-                    border: '1px solid #D79B52',
-                    backgroundColor: '#FAF8F3',
-                    padding: '12px 16px',
-                    borderRadius: '10px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <div>
-                    <h5 style={{ fontSize: '14px', fontWeight: 700 }}>
-                      {locale === 'kn' ? v.nameKn : v.nameEn}
-                    </h5>
-                    <span style={{ fontSize: '12px', color: '#6B726B' }}>
-                      {v.portionQuantity} {v.portionUnit}
-                    </span>
-                  </div>
-                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#234B3A' }}>
-                    {formatINR(v.pricePaise)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cart Summary Modal Sheet */}
-      {isCartSheetOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'center',
-            zIndex: 100
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderTopLeftRadius: '20px',
-              borderTopRightRadius: '20px',
-              padding: '24px',
-              maxWidth: '480px',
-              width: '100%'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#234B3A' }}>
-                {locale === 'kn' ? 'ನಿಮ್ಮ ಆರ್ಡರ್ ದೃಢೀಕರಣ' : 'Confirm Your Table Order'}
-              </h3>
-              <button
-                onClick={() => setIsCartSheetOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                <X size={20} color="#6B726B" />
-              </button>
-            </div>
-
-            <p style={{ fontSize: '13px', color: '#6B726B', marginBottom: '14px' }}>
-              Table: <strong>{activeTableNumber}</strong> • Pay after dining at the counter
-            </p>
-
-            <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '16px' }}>
-              {Object.entries(cart)
-                .filter(([_, qty]) => qty > 0)
-                .map(([varId, qty]) => {
-                  let vName = '';
-                  let vPrice = 0;
-                  for (const d of dishes) {
-                    const v = d.variants.find((v) => v.id === varId);
-                    if (v) {
-                      vName = locale === 'kn' ? `${d.nameKn} (${v.nameKn})` : `${d.nameEn} (${v.nameEn})`;
-                      vPrice = v.pricePaise;
-                    }
-                  }
-                  return (
-                    <div
-                      key={varId}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        padding: '8px 0',
-                        borderBottom: '1px solid #FAF8F3'
-                      }}
-                    >
-                      <span style={{ fontSize: '14px' }}>
-                        {qty}x {vName}
-                      </span>
-                      <span style={{ fontSize: '14px', fontWeight: 700 }}>
-                        {formatINR(vPrice * qty)}
-                      </span>
-                    </div>
-                  );
-                })}
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: '16px',
-                fontWeight: 700,
-                color: '#234B3A',
-                borderTop: '1px solid #E9E6DD',
-                paddingTop: '10px',
-                marginBottom: '20px'
-              }}
-            >
-              <span>{dict.payments.total}:</span>
-              <span>{formatINR(calculateCartTotalPaise())}</span>
-            </div>
-
-            <button
-              onClick={handleCheckout}
-              style={{
-                width: '100%',
-                padding: '14px',
-                backgroundColor: '#234B3A',
-                color: '#FFFFFF',
-                borderRadius: '10px',
-                border: 'none',
-                fontWeight: 700,
-                fontSize: '15px',
-                cursor: 'pointer'
-              }}
-            >
-              {dict.orders.placeOrder}
-            </button>
-          </div>
+            <span>{locale === 'kn' ? 'ಆರ್ಡರ್ ಮಾಡಿ' : 'Place Order'}</span>
+            <ChevronRight size={16} />
+          </button>
         </div>
       )}
     </div>

@@ -6,7 +6,11 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "node dist/migrate.js",
+    "db:seed": "node dist/seed.js",
+    "db:reset-demo": "node dist/reset-demo.js",
+    "db:bootstrap": "node dist/bootstrap.js"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.16",

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Locale } from '@pantryos/i18n';
 import { Ingredient, Dish, ProductionBatch } from '@pantryos/contracts';
-import { PlusCircle, TrendingDown, Send } from 'lucide-react';
+import { formatINR } from '@pantryos/business-rules';
+import { PlusCircle, TrendingDown, Send, BarChart3, Package, Layers } from 'lucide-react';
 
 interface AdminOverviewViewProps {
   locale: Locale;
@@ -18,13 +19,34 @@ export const AdminOverviewView: React.FC<AdminOverviewViewProps> = ({
   onPlanBatch
 }) => {
   const [selectedDishId, setSelectedDishId] = useState(dishes[0]?.id || '');
-  const [plannedYieldInput, setPlannedYieldInput] = useState('3000');
+  const [plannedYieldInput, setPlannedYieldInput] = useState('');
   const [ondcTestResult, setOndcTestResult] = useState<string | null>(null);
+  const [salesReport, setSalesReport] = useState<any>(null);
+  const [varianceReport, setVarianceReport] = useState<any[]>([]);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  // Load live database reports
+  useEffect(() => {
+    fetch('/api/v1/reports/sales')
+      .then((r) => r.json())
+      .then((d) => d.success && setSalesReport(d.data))
+      .catch(() => {});
+
+    fetch('/api/v1/reports/variance')
+      .then((r) => r.json())
+      .then((d) => d.success && setVarianceReport(d.data.variance))
+      .catch(() => {});
+  }, []);
 
   const handlePlanSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedDishId || !plannedYieldInput) return;
     onPlanBatch(selectedDishId, parseFloat(plannedYieldInput));
-    alert('Production batch planned! Assigned to kitchen.');
+    setNotification(
+      locale === 'kn' ? 'ಉತ್ಪಾದನಾ ಬ್ಯಾಚ್ ಯಶಸ್ವಿಯಾಗಿ ಯೋಜಿಸಲಾಗಿದೆ!' : 'Production batch planned successfully!'
+    );
+    setPlannedYieldInput('');
+    setTimeout(() => setNotification(null), 4000);
   };
 
   const runOndcSim = async () => {
@@ -42,19 +64,43 @@ export const AdminOverviewView: React.FC<AdminOverviewViewProps> = ({
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', overflowY: 'auto' }}>
-      <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#234B3A', marginBottom: '20px' }}>
+    <div style={{ padding: '16px', maxWidth: '1200px', margin: '0 auto', boxSizing: 'border-box' }}>
+      <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#234B3A', marginBottom: '16px' }}>
         {locale === 'kn' ? 'ಉಗ್ರಾಣ, ಬ್ಯಾಚ್ ಯೋಜನೆ ಮತ್ತು ವರದಿಗಳು' : 'Inventory, Batch Production & Variance Analytics'}
       </h2>
 
+      {notification && (
+        <div
+          style={{
+            backgroundColor: '#DEF7EC',
+            color: '#03543F',
+            padding: '10px 14px',
+            borderRadius: '6px',
+            marginBottom: '16px',
+            fontSize: '13px',
+            fontWeight: 600
+          }}
+        >
+          {notification}
+        </div>
+      )}
+
       {/* Row 1: Stock Status & Batch Planning */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', marginBottom: '28px' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
+          gap: '16px',
+          marginBottom: '24px'
+        }}
+      >
         {/* Ingredient Stock Overview */}
-        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E9E6DD' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#234B3A', marginBottom: '12px' }}>
+        <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '10px', border: '1px solid #E9E6DD' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#234B3A', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Package size={16} />
             {locale === 'kn' ? 'ಕಚ್ಚಾ ಪದಾರ್ಥಗಳ ದಾಸ್ತಾನು' : 'Ingredient Stock Balances'}
           </h3>
-          <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
+          <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
             {ingredients.map((ing) => {
               const isLow = ing.currentStock <= ing.reorderLevel;
               return (
@@ -69,11 +115,11 @@ export const AdminOverviewView: React.FC<AdminOverviewViewProps> = ({
                   }}
                 >
                   <div>
-                    <h5 style={{ fontSize: '14px', fontWeight: 600 }}>
+                    <h5 style={{ fontSize: '13px', fontWeight: 600, margin: 0 }}>
                       {locale === 'kn' ? ing.nameKn : ing.nameEn}
                     </h5>
                     <span style={{ fontSize: '11px', color: '#6B726B' }}>
-                      Category: {ing.category}
+                      {ing.category}
                     </span>
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -105,27 +151,26 @@ export const AdminOverviewView: React.FC<AdminOverviewViewProps> = ({
           </div>
         </div>
 
-        {/* Plan Cooking Batch Form */}
-        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E9E6DD' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#234B3A', marginBottom: '12px' }}>
-            {locale === 'kn' ? 'ಹೊಸ ಅಡುಗೆ ಬ್ಯಾಚ್ ಯೋಜನೆ' : 'Plan New Cooking Batch'}
+        {/* Batch Planning Form */}
+        <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '10px', border: '1px solid #E9E6DD' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#234B3A', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Layers size={16} />
+            {locale === 'kn' ? 'ಹೊಸ ಬ್ಯಾಚ್ ಯೋಜನೆ' : 'Plan Production Batch'}
           </h3>
           <form onSubmit={handlePlanSubmit}>
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
-                Select Dish:
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                {locale === 'kn' ? 'ತಿನಿಸು ಆಯ್ಕೆ ಮಾಡಿ' : 'Select Dish'}
               </label>
               <select
                 value={selectedDishId}
                 onChange={(e) => setSelectedDishId(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '10px',
+                  padding: '8px',
                   borderRadius: '6px',
-                  border: '1px solid #E9E6DD',
-                  backgroundColor: '#FAF8F3',
-                  fontSize: '14px',
-                  fontWeight: 600
+                  border: '1px solid #CCC',
+                  fontSize: '13px'
                 }}
               >
                 {dishes.map((d) => (
@@ -136,160 +181,150 @@ export const AdminOverviewView: React.FC<AdminOverviewViewProps> = ({
               </select>
             </div>
 
-            <div style={{ marginBottom: '18px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
-                Planned Yield (Target Grams / ml):
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                {locale === 'kn' ? 'ಯೋಜಿತ ಇಳುವರಿ (ಗ್ರಾಂ/ಮಿಲಿ)' : 'Planned Yield (grams/ml)'}
               </label>
               <input
                 type="number"
                 value={plannedYieldInput}
                 onChange={(e) => setPlannedYieldInput(e.target.value)}
+                placeholder="e.g. 3000"
                 style={{
                   width: '100%',
-                  padding: '10px',
+                  boxSizing: 'border-box',
+                  padding: '8px',
                   borderRadius: '6px',
-                  border: '1px solid #E9E6DD',
-                  backgroundColor: '#FAF8F3',
-                  fontSize: '15px',
-                  fontWeight: 700
+                  border: '1px solid #CCC',
+                  fontSize: '13px'
                 }}
               />
             </div>
 
             <button
               type="submit"
+              disabled={!plannedYieldInput}
               style={{
                 width: '100%',
-                padding: '12px',
-                backgroundColor: '#234B3A',
+                padding: '10px',
+                backgroundColor: !plannedYieldInput ? '#999' : '#234B3A',
                 color: '#FFFFFF',
-                borderRadius: '8px',
                 border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
                 fontWeight: 700,
-                fontSize: '14px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
+                cursor: !plannedYieldInput ? 'not-allowed' : 'pointer'
               }}
             >
-              <PlusCircle size={16} />
-              {locale === 'kn' ? 'ಬ್ಯಾಚ್ ಸೃಷ್ಟಿಸಿ ಮತ್ತು ಒಲೆ ಮೀಸಲಿಡಿ' : 'Schedule Batch & Lock Stove'}
+              {locale === 'kn' ? 'ಬ್ಯಾಚ್ ಬಿಡುಗಡೆ ಮಾಡಿ' : 'Fire Production Batch'}
             </button>
           </form>
         </div>
       </div>
 
-      {/* Row 2: MarketMan-Style Actual vs Theoretical Variance Analytics */}
+      {/* Row 2: Live Sales & Actual vs Theoretical Variance Analytics */}
       <div
         style={{
-          backgroundColor: '#FFFFFF',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid #E9E6DD',
-          marginBottom: '28px'
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
+          gap: '16px',
+          marginBottom: '24px'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-          <TrendingDown color="#D97706" size={20} />
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#234B3A' }}>
-            {locale === 'kn'
-              ? 'ಕಚ್ಚಾ ಸಾಮಗ್ರಿಗಳ ಬಳಕೆ ವ್ಯತ್ಯಾಸ ವರದಿ (MarketMan-Style Variance)'
-              : 'Actual vs. Theoretical Inventory Variance (MarketMan-Style)'}
+        {/* Sales Performance */}
+        <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '10px', border: '1px solid #E9E6DD' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#234B3A', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <BarChart3 size={16} />
+            {locale === 'kn' ? 'ದೈನಂದಿನ ಮಾರಾಟ ಕಾರ್ಯಕ್ಷಮತೆ' : 'Daily Sales Performance'}
           </h3>
+          {salesReport ? (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F3F1EC' }}>
+                <span style={{ fontSize: '13px', color: '#666' }}>{locale === 'kn' ? 'ಒಟ್ಟು ಆರ್ಡರ್‌ಗಳು' : 'Total Orders'}</span>
+                <span style={{ fontSize: '14px', fontWeight: 700 }}>{salesReport.totalOrders}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F3F1EC' }}>
+                <span style={{ fontSize: '13px', color: '#666' }}>{locale === 'kn' ? 'ಒಟ್ಟು ಮೊತ್ತ' : 'Total Sales'}</span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#234B3A' }}>{formatINR(salesReport.totalSalesPaise)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F3F1EC' }}>
+                <span style={{ fontSize: '13px', color: '#666' }}>{locale === 'kn' ? 'ಪಾವತಿಸಿದ ಮೊತ್ತ' : 'Paid Amount'}</span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#03543F' }}>{formatINR(salesReport.paidSalesPaise)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                <span style={{ fontSize: '13px', color: '#666' }}>GST (5%)</span>
+                <span style={{ fontSize: '13px', fontWeight: 600 }}>{formatINR(salesReport.totalTaxPaise)}</span>
+              </div>
+            </div>
+          ) : (
+            <p style={{ fontSize: '12px', color: '#888' }}>{locale === 'kn' ? 'ವರದಿ ಲೋಡ್ ಆಗುತ್ತಿದೆ...' : 'Loading sales report...'}</p>
+          )}
         </div>
-        <p style={{ fontSize: '12px', color: '#6B726B', marginBottom: '14px' }}>
-          Formula: Variance = Physical Consumption - Theoretical Recipe Usage (Flags kitchen spillage, over-portioning & waste).
-        </p>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#FAF8F3', borderBottom: '2px solid #E9E6DD' }}>
-                <th style={{ padding: '10px' }}>Ingredient</th>
-                <th style={{ padding: '10px' }}>Theoretical Usage</th>
-                <th style={{ padding: '10px' }}>Actual Usage</th>
-                <th style={{ padding: '10px' }}>Variance (Spillage)</th>
-                <th style={{ padding: '10px' }}>Variance %</th>
-                <th style={{ padding: '10px' }}>Cost Impact</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ borderBottom: '1px solid #E9E6DD' }}>
-                <td style={{ padding: '10px', fontWeight: 600 }}>Sona Masoori Rice (ಅಕ್ಕಿ)</td>
-                <td style={{ padding: '10px' }}>1,950 g</td>
-                <td style={{ padding: '10px' }}>2,050 g</td>
-                <td style={{ padding: '10px', color: '#C0392B', fontWeight: 700 }}>+100 g</td>
-                <td style={{ padding: '10px', color: '#C0392B' }}>5.1%</td>
-                <td style={{ padding: '10px', fontWeight: 700 }}>₹6.00</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #E9E6DD' }}>
-                <td style={{ padding: '10px', fontWeight: 600 }}>Toor Dal (ತೊಗರಿ ಬೇಳೆ)</td>
-                <td style={{ padding: '10px' }}>1,850 g</td>
-                <td style={{ padding: '10px' }}>1,870 g</td>
-                <td style={{ padding: '10px', color: '#D97706', fontWeight: 700 }}>+20 g</td>
-                <td style={{ padding: '10px', color: '#D97706' }}>1.1%</td>
-                <td style={{ padding: '10px', fontWeight: 700 }}>₹3.20</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '10px', fontWeight: 600 }}>Sunflower Cooking Oil (ಎಣ್ಣೆ)</td>
-                <td style={{ padding: '10px' }}>510 ml</td>
-                <td style={{ padding: '10px' }}>520 ml</td>
-                <td style={{ padding: '10px', color: '#D97706', fontWeight: 700 }}>+10 ml</td>
-                <td style={{ padding: '10px', color: '#D97706' }}>2.0%</td>
-                <td style={{ padding: '10px', fontWeight: 700 }}>₹1.30</td>
-              </tr>
-            </tbody>
-          </table>
+        {/* MarketMan Actual vs Theoretical Variance */}
+        <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '10px', border: '1px solid #E9E6DD' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#234B3A', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <TrendingDown size={16} />
+            {locale === 'kn' ? 'ಪದಾರ್ಥಗಳ ಬಳಕೆ ಮತ್ತು ವ್ಯತ್ಯಾಸ (MarketMan)' : 'Actual vs Theoretical Usage Variance'}
+          </h3>
+          <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+            {varianceReport.length > 0 ? (
+              varianceReport.slice(0, 6).map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    padding: '6px 0',
+                    borderBottom: '1px solid #F9F8F5',
+                    fontSize: '12px'
+                  }}
+                >
+                  <span style={{ fontWeight: 600 }}>{item.nameEn}</span>
+                  <span style={{ color: '#555' }}>
+                    Used: {item.actualUsage} {item.unit} • Waste: {item.wasteQuantity} {item.unit}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p style={{ fontSize: '12px', color: '#888' }}>{locale === 'kn' ? 'ಯಾವುದೇ ವ್ಯತ್ಯಾಸ ದಾಖಲಾಗಿಲ್ಲ' : 'No variance data available'}</p>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Row 3: ONDC RET11 Sandbox Simulator */}
-      <div
-        style={{
-          backgroundColor: '#FFFFFF',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid #E9E6DD'
-        }}
-      >
-        <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#234B3A', marginBottom: '8px' }}>
-          ONDC Food & Beverage (RET11) Sandbox Simulator
+      {/* Row 3: ONDC RET11 Mock Simulator */}
+      <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '10px', border: '1px solid #E9E6DD' }}>
+        <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#234B3A', marginBottom: '8px' }}>
+          {locale === 'kn' ? 'ONDC RET11 ನೆಟ್‌ವರ್ಕ್ ಸಿಮ್ಯುಲೇಟರ್' : 'ONDC RET11 Network Simulator (Mock Adapter)'}
         </h3>
-        <p style={{ fontSize: '12px', color: '#6B726B', marginBottom: '14px' }}>
-          Simulates Beckn Protocol v1.2.0 search and catalog generation for local buyer networks.
+        <p style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>
+          Simulates Beckn protocol `on_search` catalog discovery and incoming multi-channel order deduplication.
         </p>
-
         <button
           onClick={runOndcSim}
           style={{
-            padding: '10px 18px',
+            padding: '8px 14px',
             backgroundColor: '#D79B52',
-            color: '#181A19',
-            borderRadius: '6px',
+            color: '#FFFFFF',
             border: 'none',
-            fontSize: '13px',
+            borderRadius: '6px',
+            fontSize: '12px',
             fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
+            cursor: 'pointer'
           }}
         >
-          <Send size={15} />
-          Simulate ONDC `on_search` Catalog Ping
+          {locale === 'kn' ? 'ONDC RET11 ಕ್ಯಾಟಲಾಗ್ ಪಿಂಗ್ ಮಾಡಿ' : 'Ping ONDC RET11 Catalog'}
         </button>
-
         {ondcTestResult && (
           <pre
             style={{
-              marginTop: '14px',
-              padding: '12px',
-              backgroundColor: '#181A19',
-              color: '#52C41A',
-              borderRadius: '8px',
-              fontSize: '12px',
+              marginTop: '12px',
+              padding: '10px',
+              backgroundColor: '#1E1E1E',
+              color: '#4AF626',
+              borderRadius: '6px',
+              fontSize: '11px',
               overflowX: 'auto'
             }}
           >

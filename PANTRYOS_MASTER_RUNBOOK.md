@@ -20,8 +20,21 @@ cd /home/5296658037_0/.gemini/antigravity/scratch/pantry-os
 # 2. Install all dependencies across workspaces
 pnpm install
 
-# 3. Build all workspace packages (contracts, business rules, i18n, ui, database)
+# 3. Database migrations and initial setup (PGlite standalone or PostgreSQL)
+pnpm run db:migrate       # Runs schema DDL migrations
+pnpm run db:bootstrap     # One-time first admin & branch setup
+pnpm run db:seed          # Seeds authentic synthetic demo data (3 dishes, staff, equipment)
+# Or reset operational demo data at any time:
+# pnpm run db:reset-demo
+
+# 4. Build all workspace packages (contracts, business rules, i18n, ui, database, api, web)
 pnpm run build
+
+# 5. Run test suite (35 automated unit, integration, and E2E scenario tests)
+pnpm test
+
+# 6. Typecheck all workspaces
+pnpm run typecheck
 ```
 
 ### 1.3 Running the Services
